@@ -1,100 +1,73 @@
-from tkinter import *
+import sys
 import random
 import string
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QGridLayout, QWidget
 
-class WordHunt:
-    def __init__(self, window):
-        self.window = window
-        window.title("Word Hunt")
+# list of valid words in English dictionary from https://github.com/dwyl/english-words
 
-        self.wordlist = []
+class WordHunt(QMainWindow):
+    def __init__(self):
+        super().__init__()
 
-        self.current_word = CurrentWord(window)
-        self.score = Score(window)
+        with open("words_alpha.txt") as file:
+            self.validWords = set(word.strip().lower() for word in file)
+        self.enteredWords = []
+        self.currentWord = []
+        self.letterButtons = []
 
-        self.letter1_button = LetterButton(window, self.current_word, "A", 1, 0)
-        self.letter2_button = LetterButton(window, self.current_word, "B", 1, 1)
-        self.letter3_button = LetterButton(window, self.current_word, "C", 2, 0)
-        self.letter4_button = LetterButton(window, self.current_word, "D", 2, 1)
+        self.score = 0
+        self.words = 0
 
-        self.enter_button = ActionButton(window, "enter", 3, self.enter)
-        self.undo_button = ActionButton(window, "undo", 4, self.undo)
-        self.clear_button = ActionButton(window, "clear", 5, self.clear)
+        self.initialize_window()
+        self.create_buttons()
 
-        self.exit_button = ActionButton(window, "exit", 6, window.quit)
+    def initialize_window(self):
+        self.window = QWidget(self)
+        self.setCentralWidget(self.window)
+        self.setGeometry(50, 50, 400, 600)
+        self.setWindowTitle("Word Hunt Game")
+        self.show()
+
+    def create_buttons(self):
+        row = 4
+        col = 4
+        self.grid = QGridLayout()
+        for i in range(0, row):
+            for j in range(0, col):
+                button = LetterButton(i, j, row, col, self.letterButtons)
+                self.grid.addWidget(button, i, j)
+        self.window.setLayout(self.grid)
+
+class LetterButton(QPushButton):
+    def __init__(self, x, y, row, col, list):
+        super().__init__()
+        self.name = str(col*x + y)
+        self.letter = random.choice(string.ascii_lowercase)
+        self.setText(self.letter)
+        self.clicked.connect(self.button_clicked)
+        self.list = list
+        self.x = x
+        self.y = y
     
-    def clear(self):
-        self.current_word.clear()
-    
-    def enter(self):
-        if (len(self.word()) >= 3 and self.word() not in self.wordlist):
-            self.wordlist.append(self.word())
-            self.current_word.clear()
-            print(self.wordlist)
-    
-    def undo(self):
-        self.current_word.undo()
-    
-    def word(self):
-        return self.current_word.get_word()
-
-class LetterButton:
-    def __init__(self, window, label, letter, row, column):
-        self.button = Button(window, text = letter, command = self.letter_button_click)
-        self.button.grid(row = row, column = column)
-        self.letter = letter
-        self.label = label
-    
-    def letter_button_click(self):
-        self.label.update_word(self.get_letter())
-
-    def get_button(self):
-        return self.button
+    def button_clicked(self):
+        if (not self.list):
+            self.add_to_list()
+        else:
+            if (self not in self.list):
+                prevButton = self.list[-1]
+                if (self.is_adjacent(prevButton)):
+                    self.add_to_list()
 
     def get_letter(self):
         return self.letter
+    
+    def is_adjacent(self, button):
+        return abs(button.x - self.x) <= 1 and abs(button.y - self.y) <= 1
+    
+    def add_to_list(self):
+        self.list.append(self)
 
-class ActionButton:
-    def __init__(self, window, text, row, command):
-        self.button = Button(window, text = text, command = command)
-        self.button.grid(row = row, columnspan = 2, sticky = W+E)
-
-# class Score:
-#     def __init__(self, window):
-#         self.score = 0
-#         self.label = Label(window, text = self.score)
-#         self.label.grid(columnspan=3, sticky=W+E)
-    
-#     def get_score(self):
-#         return self.score
-
-class CurrentWord:
-    def __init__(self, window):
-        self.word = ""
-        self.label = Label(window, text = self.word)
-        self.label.grid(columnspan=3, sticky=W+E)
-    
-    def get_word(self):
-        return self.word
-    
-    def update_word(self, letter):
-        self.word = self.word + letter
-        self.update_label()
-    
-    def clear(self):
-        self.word = ""
-        self.update_label()
-    
-    def undo(self):
-        self.word = self.word[:-1]
-        self.update_label()
-    
-    def update_label(self):
-        self.label.configure(text = self.word)
-
-    
-
-# using Tkinter and above classes to create the game board
-root = Tk()
-game = WordHunt(root)
-root.mainloop()
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    wordHunt = WordHunt()
+    sys.exit(app.exec_())
